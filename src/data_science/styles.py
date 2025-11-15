@@ -10,6 +10,7 @@ __all__ = (
 
 # NOTE: luna is similar to xkcd with slight improvements
 # NOTE: supports customizable font families
+# TODO: find a handwriting-like font to use as default
 
 
 def apply_luna_style(
