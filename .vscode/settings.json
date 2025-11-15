@@ -12,13 +12,13 @@
   "editor.formatOnSave": false,
 
   // Ruff
-  // "ruff.configuration": "${workspaceFolder}/.vscode/ruff.toml",
+  "ruff.configuration": "${workspaceFolder}/.vscode/ruff.toml",
 
   // Python
   "[python]": {
     "editor.codeActionsOnSave": {
       "source.fixAll": "explicit",
-      "source.organizeImports": "explicit"
+      // "source.organizeImports": "explicit"
     },
     "editor.defaultFormatter": "charliermarsh.ruff"
   }
