@@ -12,13 +12,14 @@ from matplotlib import pyplot as plt
 from matplotlib.colors import Colormap, Normalize, to_rgba
 from scipy.cluster.hierarchy import dendrogram, linkage, set_link_color_palette
 from sklearn.decomposition import PCA
-from sklearn.metrics import (
-    adjusted_rand_score,
-    completeness_score,
-    homogeneity_score,
-    normalized_mutual_info_score,
-    silhouette_score,
-    v_measure_score,
+
+__all__ = (
+    'plot_clusters',
+    'plot_confusion_matrix',
+    'plot_cumulative_explained_variance',
+    'plot_dendrogram',
+    'plot_elbow',
+    'plot_pca_scatter',
 )
 
 
@@ -343,188 +344,6 @@ def plot_elbow(
         return elbow_k
     else:
         return fig, ax, elbow_k
-
-
-#
-
-
-def _safe_silhouette(X: np.ndarray, labels: np.ndarray) -> float:
-    """Compute silhouette safely; return np.nan if not computable."""
-    try:
-        # silhouette requires at least 2 clusters and < n_samples clusters
-        unique_labels = np.unique(labels)
-        if unique_labels.size < 2 or unique_labels.size >= labels.size:
-            return np.nan
-        return float(silhouette_score(X, labels))
-    except Exception:
-        return np.nan
-
-
-def evaluate_clustering_single(
-    true_labels: np.ndarray,
-    labels: np.ndarray,
-    X_data: np.ndarray | None = None,
-    k: int | None = None,
-    inertia: float | None = None,
-) -> dict[str, Any]:
-    res = {}
-    res['k'] = int(k) if k is not None else (int(np.unique(labels).size))
-    res['adjusted_rand_score'] = float(adjusted_rand_score(true_labels, labels))
-    res['normalized_mutual_info'] = float(normalized_mutual_info_score(true_labels, labels))
-    res['homogeneity_score'] = float(homogeneity_score(true_labels, labels))
-    res['completeness_score'] = float(completeness_score(true_labels, labels))
-    res['v_measure_score'] = float(v_measure_score(true_labels, labels))
-    res['silhouette_score'] = _safe_silhouette(X_data, labels) if X_data is not None else np.nan
-    res['inertia'] = None if inertia is None else float(inertia)
-    return res
-
-
-def kmeans_metrics_plot(
-    runs: list[tuple[str, np.ndarray, np.ndarray, int | None] | dict[str, Any]],
-    X_data: np.ndarray | None = None,
-    *,
-    title: str | None = None,
-    metrics: list[
-        Literal[
-            'adjusted_rand_score',  # ARI
-            'normalized_mutual_info',  # NMI
-            'homogeneity_score',
-            'completeness_score',
-            'v_measure_score',
-            'silhouette_score',
-        ]
-    ]
-    | None = None,
-    palette: str | list = 'muted',
-    figsize: tuple[int, int] = (14, 8),
-    dpi: int = 120,
-    show_values: bool = True,
-    value_fmt: str = '{:.3f}',
-    value_min: float = 0.01,
-):
-    """
-    Single-step: evaluate given runs and plot comparison.
-
-    runs accepts:
-      - tuple: (label, true_labels, predicted_labels, k)   # inertia optional -> pass None for k if unknown
-      - dict: {'label': str, 'true': y_true, 'pred': y_pred, 'k': int (optional), 'inertia': float (optional)}
-
-    Returns: (df_results_long, fig, ax)
-    """
-    # Default metrics
-    metrics = metrics or [
-        'adjusted_rand_score',
-        'normalized_mutual_info',
-        'homogeneity_score',
-        'completeness_score',
-        'v_measure_score',
-        'silhouette_score',
-    ]
-    metric_labels = {
-        'adjusted_rand_score': 'ARI',
-        'normalized_mutual_info': 'NMI',
-        'homogeneity_score': 'Homogeneity',
-        'completeness_score': 'Completeness',
-        'v_measure_score': 'V-Measure',
-        'silhouette_score': 'Silhouette',
-    }
-
-    # normalize runs to list of (label, res_dict)
-    results_list: list[tuple[str, dict[str, Any]]] = []
-    for item in runs:
-        if isinstance(item, dict):
-            label = item.get('label') or item.get('name') or 'run'
-            true = np.asarray(item['true'])
-            labels = np.asarray(item['labels'])
-            k = item.get('k', None)
-            inertia = item.get('inertia', None)
-        else:
-            # tuple case
-            # accept length 3 or 4: (label, true, pred) or (label, true, pred, k) or (label, true, pred, k, inertia)
-            tup = tuple(item)
-            label = tup[0]
-            true = np.asarray(tup[1])
-            labels = np.asarray(tup[2])
-            k = tup[3] if len(tup) >= 4 else None
-            inertia = tup[4] if len(tup) >= 5 else None
-
-        res = evaluate_clustering_single(true, labels, X_data=X_data, k=k, inertia=inertia)
-        results_list.append((label, res))
-
-    # build long-form DataFrame
-    records = []
-    for run_label, res in results_list:
-        for m in metrics:
-            records.append({
-                'run_label': run_label,
-                'metric': m,
-                'metric_short': metric_labels.get(m, m),
-                'value': float(res.get(m, np.nan)),
-            })
-    dfc = pd.DataFrame.from_records(records)
-
-    # preserve metric order
-    metric_order = [metric_labels.get(m, m) for m in metrics]
-    dfc['metric_short'] = pd.Categorical(dfc['metric_short'], categories=metric_order, ordered=True)
-
-    # plot
-    fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
-    sns.barplot(
-        data=dfc,
-        x='metric_short',
-        y='value',
-        hue='run_label',
-        palette=palette,
-        dodge=True,
-        errorbar=None,
-        ax=ax,
-    )
-
-    # small aesthetics
-    for p in ax.patches:
-        p.set_linewidth(0.4)
-        p.set_alpha(0.9)
-        p.set_edgecolor(p.get_facecolor())
-
-    # show numeric values
-    if show_values:
-        for p in ax.patches:
-            v = p.get_height()
-            if np.isfinite(v) and (v > value_min):
-                ax.text(
-                    p.get_x() + p.get_width() / 2.0,
-                    v + 0.01,
-                    value_fmt.format(v),
-                    ha='center',
-                    va='bottom',
-                    fontsize=11,
-                )
-
-    # title fallback
-    if title is None and len(results_list) >= 2:
-        title = f'K-Means Clustering Performance: {results_list[0][0]} vs {results_list[1][0]}'
-    elif title is None:
-        title = 'K-Means Clustering Performance'
-
-    ax.set_title(title, fontsize=18, pad=10)
-    ax.set_xlabel('Evaluation Metrics', fontsize=14)
-    ax.set_ylabel('Score', fontsize=14)
-    ax.tick_params(axis='both', which='major', labelsize=12)
-    ax.grid(False)
-    ax.legend(title=None, fontsize=12, frameon=True, fancybox=True, loc='upper right')
-
-    # adjust y limit to show values nicely
-    vals = dfc['value'].replace([np.inf, -np.inf], np.nan).dropna().to_numpy()
-    if vals.size > 0:
-        top = float(np.nanmax(vals)) * 1.15
-        # if all values are <= 1 (most metrics), keep top <=1.15
-        if np.nanmax(vals) <= 1.0:
-            ax.set_ylim(0, min(1.15, top))
-        else:
-            ax.set_ylim(0, top)
-
-    plt.tight_layout()
-    return dfc, fig, ax
 
 
 # clustering
