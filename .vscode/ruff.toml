@@ -1,0 +1,7 @@
+# This file overrides pyproject.toml rules to make development easier.
+
+[lint]
+unfixable = [
+    "F401" # Pyflakes: unused-import
+]
+extend-ignore = []
