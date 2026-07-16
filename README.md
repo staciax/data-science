@@ -5,14 +5,14 @@ A collection of coursework exploring data science concepts through assignments a
 ## Algorithms
 
 ### Supervised Learning
-- **K-Nearest Neighbors (KNN)** - Classify based on nearest neighbors
-- **Decision Trees** - Tree structure for classification and regression
-- **Random Forest** - Multiple decision trees working together
+- [**K-Nearest Neighbors (KNN)**](knn) - Classify based on nearest neighbors
+- [**Decision Trees**](decision-tree-and-random-forest) - Tree structure for classification and regression
+- [**Random Forest**](decision-tree-and-random-forest) - Multiple decision trees working together
 
 ### Unsupervised Learning
-- **K-Means Clustering** - Group data into K clusters
-- **Hierarchical Clustering** - Create cluster hierarchies
-- **Principal Component Analysis (PCA)** - Reduce dimensions while keeping important info
+- [**K-Means Clustering**](clustering) - Group data into K clusters
+- [**Hierarchical Clustering**](clustering) - Create cluster hierarchies
+- [**Principal Component Analysis (PCA)**](pca) - Reduce dimensions while keeping important info
 
 ## Datasets
 
