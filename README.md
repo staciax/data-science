@@ -1,6 +1,6 @@
 # Data Science Projects
 
-My data science journey with machine learning projects using Python.
+A collection of coursework exploring data science concepts through assignments and a final exam project.
 
 ## Algorithms
 
